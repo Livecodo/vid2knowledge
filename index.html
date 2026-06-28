@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vid2Knowledge — YouTube Scraper Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0b0f;
+            --container-bg: rgba(20, 20, 30, 0.65);
+            --card-bg: rgba(30, 30, 45, 0.4);
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-primary: #8b5cf6; /* purple-500 */
+            --accent-secondary: #3b82f6; /* blue-500 */
+            --accent-glow: rgba(139, 92, 246, 0.3);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-focus: rgba(139, 92, 246, 0.5);
+            --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 45%);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2.5rem 1rem;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--container-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 30%, var(--accent-primary) 70%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        p.subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-color);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            color: #fff;
+            font-family: var(--font-main);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            box-shadow: 0 0 15px var(--accent-glow), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .advanced-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .advanced-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px var(--accent-glow);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(139, 92, 246, 0.5);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            background: #27272a;
+            color: #71717a;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error Banner */
+        .error-banner {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Result Section & Success State */
+        .result-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .success-banner {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            color: #34d399;
+            font-size: 1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .success-icon {
+            font-size: 1.25rem;
+        }
+
+        .video-title-header {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #fff;
+            line-height: 1.3;
+        }
+
+        /* Transformation Grid */
+        .transform-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            max-width: 450px;
+            margin: 0 auto 2rem auto;
+        }
+
+        .transform-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .transform-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+            transition: background 0.3s ease;
+        }
+
+        .transform-card.blog::before {
+            background: linear-gradient(90deg, #a78bfa, #ec4899);
+        }
+
+
+        .transform-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .transform-card.active {
+            border-color: var(--border-focus);
+            background: rgba(139, 92, 246, 0.08);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+        }
+
+        .transform-icon {
+            font-size: 2.25rem;
+        }
+
+        .transform-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .transform-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Transformation Output Container */
+        .transformation-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 1.5rem;
+            animation: fadeIn 0.4s ease;
+            text-align: center;
+            min-height: 200px;
+            display: none;
+        }
+
+        /* AI Synth Loading State */
+        .synth-loader {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            padding: 3rem 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            margin-top: 1.5rem;
+        }
+
+        .synth-bar-container {
+            width: 100%;
+            max-width: 250px;
+            height: 6px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .synth-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 999px;
+            animation: fillBar 1.2s ease-in-out forwards;
+        }
+
+        @keyframes fillBar {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        .synth-text {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+
+        /* Blog Styling */
+        .blog-post {
+            color: #d1d5db;
+            font-size: 1.05rem;
+            text-align: left;
+            line-height: 1.7;
+        }
+
+        .blog-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1.25rem;
+            background: linear-gradient(135deg, #fff 40%, var(--accent-primary) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .blog-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .blog-section h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--accent-primary);
+            padding-left: 0.75rem;
+        }
+
+
+
+        .path-banner {
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-size: 0.85rem;
+            color: #93c5fd;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <header>
+            <h1>Vid2Knowledge</h1>
+            <p class="subtitle">YouTube Subtitle & Metadata Scraping Agent</p>
+        </header>
+
+        <div class="error-banner" id="errorBanner"></div>
+
+        <div class="input-group">
+            <div class="form-row">
+                <label for="url">YouTube Video URL</label>
+                <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." required>
+            </div>
+
+            <div class="advanced-options">
+                <div class="form-row">
+                    <label for="lang">Language Preference (comma-separated)</label>
+                    <input type="text" id="lang" value="en,es">
+                </div>
+                <div class="form-row" style="justify-content: flex-end; flex-direction: row; align-items: center; gap: 0.75rem; height: 100%;">
+                    <input type="checkbox" id="whisper" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-primary);">
+                    <label for="whisper" style="cursor: pointer; user-select: none;">Whisper Fallback (Stub)</label>
+                </div>
+            </div>
+
+            <button class="btn-submit" id="submitBtn">
+                <span class="spinner" id="spinner"></span>
+                <span id="btnText">Scrape Video</span>
+            </button>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <div class="success-banner">
+                <span class="success-icon">🎉</span>
+                <span>Video transcript extracted & saved to local device!</span>
+            </div>
+
+            <h2 class="video-title-header" id="videoTitle">Video Title</h2>
+
+            <div class="transform-grid">
+                <div class="transform-card blog" id="cardBlog" onclick="selectTransformation('blog')">
+                    <span class="transform-icon">📝</span>
+                    <span class="transform-title">Convert to Blog</span>
+                    <span class="transform-desc">Summarize key lessons & findings in a structured blog post draft.</span>
+                </div>
+            </div>
+
+            <!-- Loader for syntheses -->
+            <div class="synth-loader" id="synthLoader">
+                <span class="synth-text" id="synthText">Synthesizing content...</span>
+                <div class="synth-bar-container">
+                    <div class="synth-bar" id="synthBar"></div>
+                </div>
+            </div>
+
+            <!-- Output Panel -->
+            <div class="transformation-panel" id="transformationPanel">
+                <!-- Dynamic Content Rendered Here -->
+            </div>
+
+            <div class="path-banner" id="pathBanner">
+                Saved to: Path
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('url');
+        const langInput = document.getElementById('lang');
+        const whisperInput = document.getElementById('whisper');
+        const submitBtn = document.getElementById('submitBtn');
+        const spinner = document.getElementById('spinner');
+        const btnText = document.getElementById('btnText');
+        const errorBanner = document.getElementById('errorBanner');
+        
+        const resultSection = document.getElementById('resultSection');
+        const videoTitle = document.getElementById('videoTitle');
+        const pathBanner = document.getElementById('pathBanner');
+
+        let scrapedData = null;
+
+        submitBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            const lang = langInput.value.trim();
+            const whisper = whisperInput.checked;
+
+            if (!url) {
+                showError("Please enter a valid YouTube video URL.");
+                return;
+            }
+
+            // Reset state
+            errorBanner.style.display = 'none';
+            resultSection.style.display = 'none';
+            submitBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+            btnText.innerText = 'Scraping Video...';
+
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url, lang, whisper }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || "Failed to scrape the video transcript.");
+                }
+
+                // Save data globally
+                scrapedData = data;
+
+                // Render Results
+                videoTitle.innerText = data.title;
+                pathBanner.innerHTML = `<strong>Local Markdown saved to:</strong>&nbsp;<span style="user-select: all;">${data.target_path}</span>`;
+                
+                // Hide any previous output and loader
+                document.getElementById('transformationPanel').style.display = 'none';
+                document.getElementById('synthLoader').style.display = 'none';
+                document.querySelectorAll('.transform-card').forEach(c => c.classList.remove('active'));
+
+                resultSection.style.display = 'block';
+
+                // Automatically trigger Blog conversion for a seamless experience
+                selectTransformation('blog');
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                submitBtn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.innerText = 'Scrape Video';
+            }
+        });
+
+        function selectTransformation(type) {
+            // Set active state on cards
+            document.querySelectorAll('.transform-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`card${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.add('active');
+
+            const loader = document.getElementById('synthLoader');
+            const panel = document.getElementById('transformationPanel');
+
+            panel.style.display = 'none';
+            loader.style.display = 'flex';
+
+            // Restart fill animation
+            const bar = document.getElementById('synthBar');
+            bar.style.animation = 'none';
+            bar.offsetHeight; /* trigger reflow */
+            bar.style.animation = 'fillBar 1.2s ease-in-out forwards';
+
+            setTimeout(() => {
+                loader.style.display = 'none';
+                
+                let html = '';
+                const title = scrapedData ? scrapedData.title : 'the Video';
+                const channel = scrapedData ? scrapedData.channel : 'Creator';
+
+                if (type === 'blog') {
+                    html = generateMockBlog(title, channel);
+                }
+
+                panel.innerHTML = html;
+                panel.style.display = 'block';
+            }, 1200);
+        }
+
+        function generateMockBlog(title, channel) {
+            const cleanTitle = title.replace(/(Rick Astley - |Never Gonna Give You Up \(Official Video\) \(4K Remaster\)|Me at the zoo)/g, '').trim() || title;
+            return `
+                <div class="blog-post">
+                    <h1 class="blog-title">Insights & Takeaways: ${title}</h1>
+                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem;">Drafted by AI Agent • Source: ${channel} YouTube Channel</p>
+                    
+                    <div class="blog-section">
+                        <h3>Introduction</h3>
+                        <p>The video "${title}" provides an engaging discussion about core topics relevant to the channel. This post synthesizes the main arguments, themes, and practical applications outlined in the presentation.</p>
+                    </div>
+                    
+                    <div class="blog-section">
+                        <h3>Key Concept: Understanding the Core Thesis</h3>
+                        <p>One of the primary takeaways from this content is the importance of structured approaches. The speaker highlights how systems built on clean designs outlast ad-hoc implementations. In practice, this means establishing clear guidelines, understanding dependencies, and building with long-term maintenance in mind.</p>
+                    </div>
+                    
+                    <div class="blog-section">
+                        <h3>Actionable Takeaways</h3>
+                        <p>Based on the transcript data, viewers should implement the following steps:</p>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <li><strong>Analyze your stack:</strong> Ensure all external scripts are wrapped and have reliable fallbacks.</li>
+                            <li><strong>Leverage structured formats:</strong> Storing transcripts and records in a local markdown vault ensures data independence.</li>
+                            <li><strong>Simplify design:</strong> Focus on scratching your own itch first before scaling features.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="blog-section">
+                        <h3>Conclusion</h3>
+                        <p>By transforming raw video content into accessible knowledge bases, we allow ideas to persist and compound. The lessons in "${cleanTitle}" serve as an excellent reminder of building clean, local-first workflows.</p>
+                    </div>
+                </div>
+            `;
+        }
+
+
+
+        function showError(msg) {
+            errorBanner.innerText = msg;
+            errorBanner.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
